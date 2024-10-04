@@ -37,8 +37,8 @@ public class SecurityConfig {
         http.cors(cors -> corsConfigurationSource())
                 .csrf(csrf -> csrf.disable())  // Disable CSRF for stateless JWT
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/signup", "/api/auth/signin").permitAll()  // Public endpoints
-                      .requestMatchers( "/api/plants","/api/measures","/api/kpis","/api/devices").hasAnyAuthority("ADMIN", "VIEWER")  // Only allow ADMIN or VIEWER to access plants
+                        .requestMatchers("/api/auth/signup", "/api/auth/signin","/error").permitAll()  // Public endpoints
+                      .requestMatchers( "/api/plants","/api/measures/**","/api/kpis","/api/devices").hasAnyAuthority("ADMIN", "VIEWER")  // Only allow ADMIN or VIEWER to access plants
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")  // Check for "ADMIN"
 
                         .anyRequest().authenticated()  // All other endpoints require authentication
