@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import gep.ma.intelligent.pv.Models.PageResult;
 import gep.ma.intelligent.pv.Repos.MeasuresRepository;
+import java.time.Instant;
 
 
 import org.springframework.http.ResponseEntity;
@@ -32,36 +33,44 @@ public class MeasuresController {
     }
 
 
-        @GetMapping("/paginated")
-        public ResponseEntity<Map<String, Object>> getMeasuresPaginated(
-                @RequestParam int plantId,
-                @RequestParam int page,
-                @RequestParam int size,
-                @RequestParam(required = false) String pagingState,
-                @RequestParam(required = false) String variableType // Optional parameter
-        ) {
-            Pageable pageable = PageRequest.of(page, size);
+    @GetMapping("/paginated")
+    public ResponseEntity<Map<String, Object>> getMeasuresPaginated(
+            @RequestParam int plantId,
+            @RequestParam int page,
+            @RequestParam int size,
+            @RequestParam(required = false) String pagingState,
+            @RequestParam(required = false) String variableType,
+            @RequestParam(required = false) String startDate, // Optional startDate
+            @RequestParam(required = false) String endDate   // Optional endDate
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
 
-            // Get the paginated data from the service
-            Slice<Measures> measuresSlice = measuresService.getMeasuresByPlantIdAndVariableType(plantId, variableType, pageable, pagingState);
+        // Convert startDate and endDate to Instant
+        Instant startInstant = startDate != null ? Instant.parse(startDate) : Instant.EPOCH; // Default to epoch if not provided
+        Instant endInstant = endDate != null ? Instant.parse(endDate) : Instant.now(); // Default to current time if not provided
 
-            // Prepare response with paging state
-            Map<String, Object> response = new HashMap<>();
-            response.put("measures", measuresSlice.getContent());
-            response.put("hasNext", measuresSlice.hasNext());
+        // Get the paginated data from the service
+        Slice<Measures> measuresSlice = measuresService.getMeasuresByPlantIdAndVariableTypeAndDateRange(
+                plantId, variableType, startInstant, endInstant, pageable, pagingState
+        );
 
-            // Handling Cassandra-specific paging state
-            if (measuresSlice.hasNext() && pageable instanceof CassandraPageRequest) {
-                CassandraPageRequest cassandraPageRequest = (CassandraPageRequest) pageable;
-                // Encode paging state to Base64 to return as a string
-                String newPagingState = Base64.getEncoder().encodeToString(cassandraPageRequest.getPagingState().array());
-                response.put("pagingState", newPagingState);
-            } else {
-                response.put("pagingState", null);
-            }
+        // Prepare response with paging state
+        Map<String, Object> response = new HashMap<>();
+        response.put("measures", measuresSlice.getContent());
+        response.put("hasNext", measuresSlice.hasNext());
 
-            return ResponseEntity.ok(response);
+        // Handling Cassandra-specific paging state
+        if (measuresSlice.hasNext() && pageable instanceof CassandraPageRequest) {
+            CassandraPageRequest cassandraPageRequest = (CassandraPageRequest) pageable;
+            // Encode paging state to Base64 to return as a string
+            String newPagingState = Base64.getEncoder().encodeToString(cassandraPageRequest.getPagingState().array());
+            response.put("pagingState", newPagingState);
+        } else {
+            response.put("pagingState", null);
         }
+
+        return ResponseEntity.ok(response);
+    }
 
 
 

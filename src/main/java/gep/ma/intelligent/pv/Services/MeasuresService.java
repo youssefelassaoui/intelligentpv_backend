@@ -12,6 +12,7 @@ import org.springframework.data.cassandra.core.query.CassandraPageRequest;
 import com.datastax.oss.driver.api.core.cql.PagingState;
 import java.util.Base64;
 import java.nio.ByteBuffer;
+import java.time.Instant;
 @Service
 public class MeasuresService {
 
@@ -23,7 +24,14 @@ public class MeasuresService {
     }
 
     // Fetch all measures for a specific plantId with pagination
-    public Slice<Measures> getMeasuresByPlantIdAndVariableType(int plantId, String variableType, Pageable pageable, String pagingState) {
+    public Slice<Measures> getMeasuresByPlantIdAndVariableTypeAndDateRange(
+            int plantId,
+            String variableType,
+            Instant startDate,
+            Instant endDate,
+            Pageable pageable,
+            String pagingState
+    ) {
         CassandraPageRequest pageRequest;
 
         // Check if the paging state is present and use it for the subsequent page
@@ -34,7 +42,10 @@ public class MeasuresService {
             pageRequest = CassandraPageRequest.first(pageable.getPageSize());
         }
 
-        return measuresRepository.findByKeyPlantIdAndVariableType(plantId, variableType, pageRequest);
+        // Use the repository method to filter by date range
+        return measuresRepository.findByKeyPlantIdAndVariableTypeAndDatetimeBetween(
+                plantId, variableType, startDate, endDate, pageRequest
+        );
     }
 
 

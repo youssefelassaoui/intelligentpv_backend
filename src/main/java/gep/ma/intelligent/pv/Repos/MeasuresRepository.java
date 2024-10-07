@@ -8,12 +8,19 @@ import org.springframework.stereotype.Repository;
 import org.springframework.data.cassandra.repository.Query;
 import gep.ma.intelligent.pv.Models.MeasuresKey;
 import org.springframework.data.domain.Page;
-
+import java.time.Instant;
 
 @Repository
 public interface MeasuresRepository extends CassandraRepository<Measures, Long> {
-    // Query to find measures by plantId and variableType with pagination
-    @Query("SELECT * FROM measures WHERE plantid = ?0 AND variabletype = ?1 ALLOW FILTERING")
-    Slice<Measures> findByKeyPlantIdAndVariableType(int plantId, String variableType, Pageable pageable);
+
+    // Query to find measures by plantId, variableType, and datetime range with pagination
+    @Query("SELECT * FROM measures WHERE plantid = ?0 AND variabletype = ?1 AND datetime >= ?2 AND datetime <= ?3 ALLOW FILTERING")
+    Slice<Measures> findByKeyPlantIdAndVariableTypeAndDatetimeBetween(
+            int plantId,
+            String variableType,
+            Instant startDate,
+            Instant endDate,
+            Pageable pageable
+    );
 }
 
