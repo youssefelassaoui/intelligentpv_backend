@@ -11,7 +11,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins("http://localhost:3000") // Adjust this to your frontend's origin
+                .allowedOrigins("http://localhost:3000","http://gsbp.ddns.net:3001","https://intelligent-pv.netlify.app") // Adjust this to your frontend's origin
                 .allowedMethods("GET", "POST", "PUT", "DELETE")
                 .allowCredentials(true);
     }

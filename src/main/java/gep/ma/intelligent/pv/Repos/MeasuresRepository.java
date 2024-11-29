@@ -13,14 +13,16 @@ import java.time.Instant;
 @Repository
 public interface MeasuresRepository extends CassandraRepository<Measures, Long> {
 
-    // Query to find measures by plantId, variableType, and datetime range with pagination
-    @Query("SELECT * FROM measures WHERE plantid = ?0 AND variabletype = ?1 AND datetime >= ?2 AND datetime <= ?3 ALLOW FILTERING")
-    Slice<Measures> findByKeyPlantIdAndVariableTypeAndDatetimeBetween(
+    // Query to find measures by plantId, variableType, variable, and datetime range with pagination
+    @Query("SELECT * FROM measures WHERE plantid = ?0 AND variabletype = ?1 AND variable = ?2 AND datetime >= ?3 AND datetime <= ?4 ALLOW FILTERING")
+    Slice<Measures> findByKeyPlantIdAndVariableTypeAndVariableAndDatetimeBetween(
             int plantId,
             String variableType,
+            String variable,
             Instant startDate,
             Instant endDate,
             Pageable pageable
     );
-}
 
+
+}

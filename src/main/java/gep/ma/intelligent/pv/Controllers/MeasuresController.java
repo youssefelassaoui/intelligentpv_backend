@@ -8,7 +8,9 @@ import java.util.List;
 import gep.ma.intelligent.pv.Models.PageResult;
 import gep.ma.intelligent.pv.Repos.MeasuresRepository;
 import java.time.Instant;
-
+import org.springframework.http.HttpStatus;
+import gep.ma.intelligent.pv.Models.DevicesByPlant;
+import gep.ma.intelligent.pv.Repos.DevicesByPlantRepository;
 
 import org.springframework.http.ResponseEntity;
 import gep.ma.intelligent.pv.Services.MeasuresService;
@@ -31,6 +33,8 @@ public class MeasuresController {
     public MeasuresController(MeasuresService measuresService) {
         this.measuresService = measuresService;
     }
+    @Autowired
+    private DevicesByPlantRepository devicesByPlantRepository;
 
 
     @GetMapping("/paginated")
@@ -39,30 +43,65 @@ public class MeasuresController {
             @RequestParam int page,
             @RequestParam int size,
             @RequestParam(required = false) String pagingState,
-            @RequestParam(required = false) String variableType,
-            @RequestParam(required = false) String startDate, // Optional startDate
-            @RequestParam(required = false) String endDate   // Optional endDate
+            @RequestParam(required = false) String variableType,  // Add variableType parameter here
+            @RequestParam(required = false) String variable,      // Add variable parameter here
+            @RequestParam(required = false) String startDate,     // Optional startDate
+            @RequestParam(required = false) String endDate        // Optional endDate
     ) {
         Pageable pageable = PageRequest.of(page, size);
 
         // Convert startDate and endDate to Instant
-        Instant startInstant = startDate != null ? Instant.parse(startDate) : Instant.EPOCH; // Default to epoch if not provided
-        Instant endInstant = endDate != null ? Instant.parse(endDate) : Instant.now(); // Default to current time if not provided
+        Instant startInstant = startDate != null ? Instant.parse(startDate) : Instant.EPOCH;
+        Instant endInstant = endDate != null ? Instant.parse(endDate) : Instant.now();
 
-        // Get the paginated data from the service
-        Slice<Measures> measuresSlice = measuresService.getMeasuresByPlantIdAndVariableTypeAndDateRange(
-                plantId, variableType, startInstant, endInstant, pageable, pagingState
+        // Call the service to get paginated data, passing the variableType and variable
+        Slice<Measures> measuresSlice = measuresService.getMeasuresByPlantIdVariableTypeVariableAndDateRange(
+                plantId, variableType, variable, startInstant, endInstant, pageable, pagingState
         );
 
-        // Prepare response with paging state
+        // Prepare the response
         Map<String, Object> response = new HashMap<>();
         response.put("measures", measuresSlice.getContent());
         response.put("hasNext", measuresSlice.hasNext());
 
-        // Handling Cassandra-specific paging state
+        // Handle paging state
         if (measuresSlice.hasNext() && pageable instanceof CassandraPageRequest) {
             CassandraPageRequest cassandraPageRequest = (CassandraPageRequest) pageable;
-            // Encode paging state to Base64 to return as a string
+            String newPagingState = Base64.getEncoder().encodeToString(cassandraPageRequest.getPagingState().array());
+            response.put("pagingState", newPagingState);
+        } else {
+            response.put("pagingState", null);
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/status")
+    public ResponseEntity<Map<String, Object>> getMeasuresWithDeviceStatus(
+            @RequestParam int plantId,
+            @RequestParam int page,
+            @RequestParam int size,
+            @RequestParam(required = false) String pagingState,
+            @RequestParam(required = false) String startDate,  // Optional startDate
+            @RequestParam(required = false) String endDate     // Optional endDate
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        // Convert startDate and endDate to Instant
+        Instant startInstant = startDate != null ? Instant.parse(startDate) : Instant.EPOCH;
+        Instant endInstant = endDate != null ? Instant.parse(endDate) : Instant.now();
+
+        // Get the paginated data with device status
+        Slice<Map<String, Object>> resultSlice = measuresService.getMeasuresWithDeviceStatus(
+                plantId, startInstant, endInstant, pageable, pagingState);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("measuresWithDevices", resultSlice.getContent());
+        response.put("hasNext", resultSlice.hasNext());
+
+        // Handle paging state if present
+        if (resultSlice.hasNext() && pageable instanceof CassandraPageRequest) {
+            CassandraPageRequest cassandraPageRequest = (CassandraPageRequest) pageable;
             String newPagingState = Base64.getEncoder().encodeToString(cassandraPageRequest.getPagingState().array());
             response.put("pagingState", newPagingState);
         } else {
